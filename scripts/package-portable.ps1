@@ -10,6 +10,20 @@ $zipPath = "portable/LocalDomains-portable-$version.zip"
 
 Write-Host "==> Compilando helper + app (release)..."
 
+# Igual que en build.ps1: el build-script de Tauri exige que el
+# resource bin/hosts-helper.exe exista antes de compilar.
+$resourceDir = "src-tauri/bin"
+$resourceExe = "$resourceDir/hosts-helper.exe"
+
+if (!(Test-Path $resourceDir)) {
+    New-Item -ItemType Directory -Path $resourceDir | Out-Null
+}
+
+if (!(Test-Path $resourceExe)) {
+    Write-Host "==> Creando placeholder de hosts-helper.exe..."
+    New-Item -ItemType File -Path $resourceExe -Force | Out-Null
+}
+
 Push-Location "src-tauri"
 cargo build --release --bin hosts-helper
 Pop-Location
@@ -18,6 +32,9 @@ $helperExe = "src-tauri/target/release/hosts-helper.exe"
 if (!(Test-Path $helperExe)) {
     throw "No se encontró $helperExe"
 }
+
+# Copia el helper real como resource antes del `tauri build`.
+Copy-Item $helperExe $resourceExe -Force
 
 Write-Host "==> Compilando frontend + Tauri..."
 npm run build
